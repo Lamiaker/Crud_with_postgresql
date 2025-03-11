@@ -1,5 +1,5 @@
 const User = require("../models/userModel");
-
+const { userSchema } = require("../validation");
 exports.getAllUsers = async (req, res) => {
   try {
     const users = await User.getAll();
@@ -26,13 +26,20 @@ exports.getUserById = async (req, res) => {
 
 exports.createUser = async (req, res) => {
   try {
+    // Valider les données avec Joi
+    const { error } = userSchema.validate(req.body);
+    if (error) return res.status(400).json({ error: error.details[0].message });
+
     const { name, email } = req.body;
+    if (!name || !email)
+      return res.status(400).json({ error: "Nom et email sont requis" });
+    const existingUser = await User.getByEmail(email);
+    if (existingUser)
+      return res.status(400).json({ error: "Cet utilisateur existe deja" });
     const newUser = await User.create(name, email);
     res.status(201).json(newUser);
   } catch (error) {
-    res
-      .status(500)
-      .json({ error: "Erreur lors de la création de l'utilisateur" });
+    res.status(500).json({ error: "Erreur lors de la création de l'utilisateur" });
   }
 };
 
